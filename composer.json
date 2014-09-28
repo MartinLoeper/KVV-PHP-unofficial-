@@ -1,0 +1,32 @@
+{
+    "name": "loeper/kvv",
+    "type": "library",
+    "description": "This library provides simple access to the public transportation association KVV in Karlsruhe. It is based on unofficial data sources which are therefore subject to change without notice.",
+    "keywords": ["framework", "web service", "Karlsruhe", "public", "transport", "KVV", "unofficial", "binding"],
+    "license": "MIT",
+
+    "authors": [
+        {
+            "name": "Martin Löper",
+            "homepage": "https://github.com/MartinLoeper",
+			"role": "Developer"
+        }
+    ],
+
+    "require": {
+        "guzzlehttp/guzzle": "4.*",
+		"niels/ganon": "1.0",
+		"php": ">=5.4"
+    },
+
+    "autoload": {
+        "files": ["vendor/niels/ganon/src/Ganon.php"],
+		"psr-4": { 
+			"KVV\\Live\\": "src/Live/",
+			"KVV\\Type\\": "src/Type/",
+			"KVV\\": "src/"
+		}
+    },
+	
+	"prefer-stable": true
+}
