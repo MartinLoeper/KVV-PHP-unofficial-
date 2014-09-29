@@ -35,11 +35,11 @@ class Trip {
 	}
 	
 	public function getNext($new_only = TRUE) {
-		return $this->efa->getNext($this->requestInfo['timestamp'], $this->requestInfo['language'], $new_only);
+		return $this->efa->getNext($new_only, $this->requestInfo['timestamp'], $this->requestInfo['language']);
 	}
 	
 	public function getPrevious($new_only = TRUE) {
-		return $this->efa->getPrevious($this->requestInfo['timestamp'], $this->requestInfo['language'], $new_only);
+		return $this->efa->getPrevious($new_only, $this->requestInfo['timestamp'], $this->requestInfo['language']);
 	}
 	
 	public function getName() {

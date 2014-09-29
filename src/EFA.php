@@ -13,13 +13,23 @@ class EFA {
 	const WEB_ROOT = 'http://info.kvv.de/';
 	const URI_BASE = 'index.php';
 	const FIXED_TIME_CONSTANT = 123456789;
+	const TRAVEL_TYPE_DEPARTURE = 'dep';
+	const TRAVEL_TYPE_ARRIVAL = 'arr';
+	const TRAVEL_CHANGE_SPEED_SLOW = 'slow';
+	const TRAVEL_CHANGE_SPEED_NORMAL = 'normal';
+	const TRAVEL_CHANGE_SPEED_FAST = 'fast';
+	const LANGUAGE_GERMAN = '';
+	const LANGUAGE_ENGLISH = 1;
+	const LANGUAGE_FRENCH = 2;
+	const LANGUAGE_ITALIAN = 3;
+	const LANGUAGE_TURKISH = 4;
 	private $client;
 	private $cache_enabled;
 	private $current_sessionID = 0;
 	private $current_requestID = 0;
 	private $current_item_number = 0;
-	private $last_origin;
-	private $last_destination;
+	private $last_origin = '';
+	private $last_destination = '';
 	
 	/**
 		Creates a new efa object prepared for queries.
@@ -28,6 +38,25 @@ class EFA {
 	public function __construct($cache_enabled = FALSE) {
 		$this->client = new \GuzzleHttp\Client();
 		$this->cache_enabled = &$cache_enabled;
+	}
+	
+	public function serialize() {
+		return "cache_enabled=".$this->cache_enabled."&current_session_id=".$this->current_sessionID."&current_request_id=".$this->current_requestID."&current_item_number=".$this->current_item_number."&last_destination=".$this->last_destination."&last_origin=".$this->last_origin;
+	}
+	
+	public function init(array $pairs) {
+		$this->current_sessionID = $pairs["current_session_id"];
+		$this->current_request_id = $pairs["current_request_id"];
+		$this->current_item_number = $pairs["current_item_number"];
+		$this->last_destination = $pairs["last_destination"];
+		$this->last_origin  = $pairs["last_origin"];
+	}
+	
+	public static function populate(array $pairs) {
+		$obj = new EFA($pairs["cache_enabled"]);
+		$obj->init($pairs);
+		
+		return $obj;
 	}
 	
 	public function setSessionId($id) {
@@ -62,7 +91,7 @@ class EFA {
 		
 		@return tripRequest object of type \KVV\Type\TripRequest
 	**/
-	public function search($origin, $destination, $timestamp, $travel_type='dep', $no_solid_stairs=FALSE, $no_escalators=FALSE, $no_elevators=FALSE, $low_platform_vehicle=FALSE, $wheelchair=FALSE, $change_speed='normal', $lang='') {
+	public function search($origin, $destination, $timestamp, $travel_type=EFA::TRAVEL_TYPE_DEPARTURE, $no_solid_stairs=FALSE, $no_escalators=FALSE, $no_elevators=FALSE, $low_platform_vehicle=FALSE, $wheelchair=FALSE, $change_speed=EFA::TRAVEL_CHANGE_SPEED_NORMAL, $lang=EFA::LANGUAGE_GERMAN) {
 		$randomizer = (!$this->cache_enabled) ? time() : self::FIXED_TIME_CONSTANT;
 		$res = $this->client->get(self::WEB_ROOT.self::URI_BASE, [
 			'exceptions' => true,
@@ -118,7 +147,12 @@ class EFA {
 			}
 			else {
 				// return trips
-				return $this->parseTrips($html, $origin, $destination, $timestamp, $lang);
+				$trips = &$this->parseTrips($html, $origin, $destination, $timestamp, $lang);
+				
+				if($trips->isCompleted())
+					$this->current_item_number = count($trips->getInfo());
+				
+				return $trips;
 			}
 		}
 
@@ -171,17 +205,19 @@ class EFA {
 				$sections[] = new \KVV\Type\Section($infos, $origin_time, $origin_place, $destination_time, $destination_place, $stations, $timestamp);
 			}
 
-			if($this->current_item_number == 0 || $index <= (count($trip_obj)-$this->current_item_number) )
-				$trips[] = new \KVV\Type\Trip(array('timestamp' => $timestamp, 'language' => $lang, 'origin' => $origin, 'destination' => $destination), $name, $interval, $duration, $with, $changes, $sections, $this);	
+			$trips[] = new \KVV\Type\Trip(array('timestamp' => $timestamp, 'language' => $lang, 'origin' => $origin, 'destination' => $destination), $name, $interval, $duration, $with, $changes, $sections, $this);	
 		}
-		$this->current_item_number = $index;
+
 		
 		return new \KVV\Type\TripRequest(true, $trips, $this);	
 	}
 	
-	public function getNext($timestamp, $lang, $new_only = TRUE) {
-		if($this->last_origin == NULL)
-			throw new \Exception("You cannot call getNext() on an object where search() was no invoked before!", 500);
+	public function getNext($new_only = TRUE, $timestamp=-1, $lang='') {
+		if($timestamp == -1)
+			$timestamp = time();
+			
+		if($this->last_origin == '')
+			throw new \Exception("You cannot call getNext() on an object where search() or populate() was no invoked before!", 500);
 			
 		$randomizer = (!$this->cache_enabled) ? time() : self::FIXED_TIME_CONSTANT;
 		$res = $this->client->get(self::WEB_ROOT.self::URI_BASE, [
@@ -201,15 +237,26 @@ class EFA {
 		
 		if($res->getStatusCode() == 200) {
 			$html = \str_get_dom((string)$res->getBody());
-			return $this->parseTrips($html, $this->last_origin, $this->last_destination, $timestamp, $lang);
+			$trips = &$this->parseTrips($html, $this->last_origin, $this->last_destination, $timestamp, $lang)->getInfo();
+			
+			$size = count($trips);
+			if($new_only) {
+				$trips = array_slice($trips, $this->current_item_number);
+			}
+			$this->current_item_number = $size;
+			
+			return $trips;
 		}
 		
 		return null;
 	}
 	
-	public function getPrevious($timestamp, $lang) {
-		if($this->last_origin == NULL)
-			throw new \Exception("You cannot call getPrevious() on an object where search() was no invoked before!", 500);
+	public function getPrevious($new_only = TRUE, $timestamp=-1, $lang='') {
+		if($timestamp == -1)
+			$timestamp = time();
+			
+		if($this->last_origin == '')
+			throw new \Exception("You cannot call getPrevious() on an object where search() or populate() was no invoked before!", 500);
 
 		$randomizer = (!$this->cache_enabled) ? time() : self::FIXED_TIME_CONSTANT;
 		$res = $this->client->get(self::WEB_ROOT.self::URI_BASE, [
@@ -229,7 +276,15 @@ class EFA {
 		
 		if($res->getStatusCode() == 200) {
 			$html = \str_get_dom((string)$res->getBody());
-			return $this->parseTrips($html, $this->last_origin, $this->last_destination, $timestamp, $lang);
+			$trips = $this->parseTrips($html, $this->last_origin, $this->last_destination, $timestamp, $lang)->getInfo();
+			
+			$size = count($trips);
+			if($new_only) {
+				array_splice($trips, $size-$this->current_item_number);
+			}
+			$this->current_item_number = $size;
+			
+			return $trips;
 		}
 		
 		return null;	
