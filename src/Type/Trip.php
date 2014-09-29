@@ -34,12 +34,28 @@ class Trip {
 		return $this->requestInfo;
 	}
 	
+	/**
+		Returns next trips using KVV server side logic.
+		@param $new_only (optional) if false, all trips will be loaded (not only next ones) - default: TRUE
+		
+		@return an object of type \KVV\Type\Trip
+	**/
 	public function getNext($new_only = TRUE) {
 		return $this->efa->getNext($new_only, $this->requestInfo['timestamp'], $this->requestInfo['language']);
 	}
 	
+	/**
+		Returns previous trips using KVV server side logic.
+		@param $new_only (optional) if false, all trips will be loaded (not only previous ones) - default: TRUE
+		
+		@return an object of type \KVV\Type\Trip
+	**/
 	public function getPrevious($new_only = TRUE) {
 		return $this->efa->getPrevious($new_only, $this->requestInfo['timestamp'], $this->requestInfo['language']);
+	}
+	
+	public function equals(\KVV\Type\Trip $trip) {
+		return (spl_object_hash($this) == spl_object_hash($trip)) ? true : false; 
 	}
 	
 	public function getName() {

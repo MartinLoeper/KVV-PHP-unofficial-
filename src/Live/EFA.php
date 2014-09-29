@@ -53,6 +53,7 @@ class EFA {
 	/**
 		Returns information about given stop id.
 		Heads Up! Exception of type \GuzzleHttp\Exception\ClientException is thrown if an invalid id is provided.
+		@throws \KVV\Live\NoLiveDataAccessException If an unknown $stopId is provided or the given id has no live data access
 		@throws GuzzleHttp\Exception\TransferException All kinds of Exceptions by Guzzle HTTP Library
 		@param $q The id of the stop to search for.
 		
@@ -60,12 +61,17 @@ class EFA {
 	**/
 	public function searchById($q) {
 		$randomizer = (!$this->cache_enabled) ? time() : self::FIXED_TIME_CONSTANT;
-		$res = $this->client->get(self::WEB_ROOT.self::URI_BASE."stops/bystop/".urlencode($q), [
-			'exceptions' => true,
-			'query' => ['key' => self::KVV_KEY,
-						'_' => $randomizer
-			]
-		]);
+		try {
+			$res = $this->client->get(self::WEB_ROOT.self::URI_BASE."stops/bystop/".urlencode($q), [
+				'exceptions' => true,
+				'query' => ['key' => self::KVV_KEY,
+							'_' => $randomizer
+				]
+			]);
+		}
+		catch(\GuzzleHttp\Exception\ClientException $e) {
+			throw new NoLiveDataAccessException();
+		}
 		
 		if($res->getStatusCode() == 200) {
 			$val = $res->json();
@@ -144,6 +150,28 @@ class EFA {
 	}
 	
 	/**
+		Custom method which tries to find the most probable match for an array of $suggestions based on the $searchphrase.
+		@param $suggestions an array with objects of type \KVV\Type\Stop or \KVV\Type\StopExt
+		@param $searchphrase a string with should be compared to the objects in the array
+		
+		@return the \KVV\Type\Stop(Ext) object with the highest probability
+	**/
+	public static function getMostProbableMatch(array $suggestions, $searchphrase) {
+		$most_probable;
+		$highest_probability = 0;
+		foreach($suggestions AS &$suggestion) {
+			$current_probability = 0;
+			similar_text($searchphrase, $suggestion->getName(), $current_probability);
+			if($current_probability > $highest_probability) {
+				$highest_probability = $current_probability;
+				$most_probable = $suggestion;
+			}
+		}
+		
+		return $most_probable;
+	}
+	
+	/**
 		Gets departures for the given stop id and route.
 		@throws GuzzleHttp\Exception\TransferException All kinds of Exceptions by Guzzle HTTP Library
 		@param $stopId the stop id (i.e de:8212:3)
@@ -176,7 +204,7 @@ class EFA {
 
 	/**
 		Returns information whether the given stop is part of the given route.
-		Make sure that $stopId and $route really exist!
+		Make sure that $stopId and $route really exist otherwise this method will return false!
 		@throws GuzzleHttp\Exception\TransferException All kinds of Exceptions by Guzzle HTTP Library except of \GuzzleHttp\Exception\ClientException
 		@param $stopId the stop id (i.e de:8212:3)
 		@param $route the route (i.e S2)

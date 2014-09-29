@@ -75,7 +75,7 @@ class EFA {
 	/**
 		Retrieves a trip for given origin, destination and time information.
 		Heads Up! Always catch \KVV\RouteNotFoundException!
-		@throws GuzzleHttp\Exception\TransferException All kinds of Exceptions by Guzzle HTTP Library
+		@throws \GuzzleHttp\Exception\TransferException All kinds of Exceptions by Guzzle HTTP Library
 		@throws \KVV\RouteNotFoundException if no route is found (i.e. stops do not exist)
 		@param $origin The name of the the original
 		@param $destination The name of the destination
