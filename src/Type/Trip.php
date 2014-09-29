@@ -9,8 +9,9 @@ class Trip {
 	private $changes;
 	private $sections;
 	private $requestInfo;
+	private $efa;
 	
-	public function __construct($requestInfo, $name, $interval, $duration, $with, $changes, $sections) {
+	public function __construct($requestInfo, $name, $interval, $duration, $with, $changes, $sections, \KVV\EFA &$efa) {
 		$this->name = &$name;
 		$this->interval = &$interval;
 		$this->duration = &$duration;
@@ -18,18 +19,27 @@ class Trip {
 		$this->changes = &$changes;
 		$this->sections = &$sections;
 		$this->requestInfo = &$requestInfo;
+		$this->efa = &$efa;
+	}
+	
+	public function getRequestedOrigin() {
+		return $this->requestInfo['origin'];
+	}
+	
+	public function getRequestedDestination() {
+		return $this->requestInfo['destination'];
 	}
 	
 	public function getRequestInfo() {
 		return $this->requestInfo;
 	}
 	
-	public function getNext(\KVV\EFA &$efa, $new_only = TRUE) {
-		return $efa->getNext($this->requestInfo['timestamp'], $this->requestInfo['language'], $new_only);
+	public function getNext($new_only = TRUE) {
+		return $this->efa->getNext($this->requestInfo['timestamp'], $this->requestInfo['language'], $new_only);
 	}
 	
-	public function getPrevious(\KVV\EFA &$efa, $new_only = TRUE) {
-		return $efa->getPrevious($this->requestInfo['timestamp'], $this->requestInfo['language'], $new_only);
+	public function getPrevious($new_only = TRUE) {
+		return $this->efa->getPrevious($this->requestInfo['timestamp'], $this->requestInfo['language'], $new_only);
 	}
 	
 	public function getName() {

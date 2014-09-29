@@ -96,10 +96,10 @@ class EFA {
 			$this->last_destination = $destination;
 			$raw = (string)$res->getBody();
 			$html = \str_get_dom($raw);
+			$this->current_sessionID = $html('input#sessionID', 0)->value;
+			$this->current_requestID = $html('input#requestID', 0)->value;
 			if(trim(strtok($raw, "\n")) == '<!-- ix_chooser.html  DO NOT CHANGE THIS FIRST LINE: parsed in javascript !!-->') {
 				// we have to select once again...
-				$sessionID = $html('input#sessionID', 0)->value;
-				$requestID = $html('input#requestID', 0)->value;
 				$origin_stations = array();
 				$destination_stations = array();
 			
@@ -113,8 +113,8 @@ class EFA {
 					$destination_stations[] = preg_replace("/\[[^)]+\]/", "", $station_destination->getInnerText());
 				}
 				
-				$suggestion = new \KVV\Type\TripLocationSuggestion(array('timestamp' => $timestamp, 'language' => $lang), $sessionID, $requestID, $origin_stations, $destination_stations);
-				return new \KVV\Type\TripRequest(false, $suggestion);
+				$suggestion = new \KVV\Type\TripLocationSuggestion(array('timestamp' => $timestamp, 'language' => $lang), $this->current_sessionID, $this->current_requestID, $origin_stations, $destination_stations, $this);
+				return new \KVV\Type\TripRequest(false, $suggestion, $this);
 			}
 			else {
 				// return trips
@@ -172,14 +172,17 @@ class EFA {
 			}
 
 			if($this->current_item_number == 0 || $index <= (count($trip_obj)-$this->current_item_number) )
-				$trips[] = new \KVV\Type\Trip(array('timestamp' => $timestamp, 'language' => $lang, 'origin' => $origin, 'destination' => $destination), $name, $interval, $duration, $with, $changes, $sections);	
+				$trips[] = new \KVV\Type\Trip(array('timestamp' => $timestamp, 'language' => $lang, 'origin' => $origin, 'destination' => $destination), $name, $interval, $duration, $with, $changes, $sections, $this);	
 		}
 		$this->current_item_number = $index;
 		
-		return new \KVV\Type\TripRequest(true, $trips);	
+		return new \KVV\Type\TripRequest(true, $trips, $this);	
 	}
 	
 	public function getNext($timestamp, $lang, $new_only = TRUE) {
+		if($this->last_origin == NULL)
+			throw new \Exception("You cannot call getNext() on an object where search() was no invoked before!", 500);
+			
 		$randomizer = (!$this->cache_enabled) ? time() : self::FIXED_TIME_CONSTANT;
 		$res = $this->client->get(self::WEB_ROOT.self::URI_BASE, [
 			'exceptions' => true,
@@ -205,6 +208,9 @@ class EFA {
 	}
 	
 	public function getPrevious($timestamp, $lang) {
+		if($this->last_origin == NULL)
+			throw new \Exception("You cannot call getPrevious() on an object where search() was no invoked before!", 500);
+
 		$randomizer = (!$this->cache_enabled) ? time() : self::FIXED_TIME_CONSTANT;
 		$res = $this->client->get(self::WEB_ROOT.self::URI_BASE, [
 			'exceptions' => true,
