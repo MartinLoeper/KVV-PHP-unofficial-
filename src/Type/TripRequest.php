@@ -110,7 +110,7 @@ class TripRequest {
 			return $this;
 		else {
 			$tripSuggestion = $this->getInfo();
-			return $tripSuggestion->utilize($this->efa, $tripSuggestion->getRequestInfo()['timestamp'], 0, 0);
+			return $tripSuggestion->utilize(0, 0);
 		}
 	}
 }
