@@ -3,4 +3,3 @@ vendor/
 composer.lock
 index.php
 .gitattributes
-.gitignore
