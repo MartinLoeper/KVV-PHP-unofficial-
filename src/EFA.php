@@ -142,7 +142,7 @@ class EFA {
 					$destination_stations[] = preg_replace("/\[[^)]+\]/", "", $station_destination->getInnerText());
 				}
 				
-				$suggestion = new \KVV\Type\TripLocationSuggestion(array('timestamp' => $timestamp, 'language' => $lang), $this->current_sessionID, $this->current_requestID, $origin_stations, $destination_stations, $this);
+				$suggestion = new \KVV\Type\TripLocationSuggestion(array('timestamp' => $timestamp, 'language' => $lang, 'origin' => $origin, 'destination' => $destination), $this->current_sessionID, $this->current_requestID, $origin_stations, $destination_stations, $this);
 				return new \KVV\Type\TripRequest(false, $suggestion, $this);
 			}
 			else {
@@ -183,8 +183,10 @@ class EFA {
 			foreach($fahrt('ul.fahrtliste') AS &$fahrtinfo) {
 				$details = &$fahrtinfo('li', 0)->getInnerText();
 				$infos = array();
-				foreach(explode('<br>', $details) AS &$info) {
-					$infos[] = trim(strip_tags($info));
+				foreach(explode('<br />', $details) AS &$info) {
+					$val = &trim(strip_tags($info));
+					if($val != '')
+						$infos[] = $val;
 				}
 				$beginning = $fahrtinfo('li.fahrtenlist', 0);
 				$origin_time = $beginning('.tab1 strong', 0)->getInnerText();
@@ -199,7 +201,7 @@ class EFA {
 				if($stations_obj != NULL) {
 					foreach($stations_obj AS &$station) {
 						$time = $station('span', 0)->getInnerText();
-						$stations[] = array('time' => $time, 'station' => trim(str_replace($time, "", strip_tags($station->getInnerText()))));
+						$stations[] = new \KVV\Type\Station(trim(str_replace($time, "", strip_tags($station->getInnerText()))), $time, $timestamp);
 					}
 				}
 				$sections[] = new \KVV\Type\Section($infos, $origin_time, $origin_place, $destination_time, $destination_place, $stations, $timestamp);

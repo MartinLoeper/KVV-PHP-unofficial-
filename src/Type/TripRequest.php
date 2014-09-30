@@ -113,5 +113,48 @@ class TripRequest {
 			return $tripSuggestion->utilize(0, 0);
 		}
 	}
+	
+	/**
+		Custom method which tries to find the most probable match (better than getFirstMatch() but also less performant).
+
+		@return an object of type \KVV\Type\TripRequest
+	**/
+	public function getMostProbableMatch() {
+		$suggestions = &$this->getInfo();
+		$suggestions_origin = &$suggestions->getOriginSuggestions();
+		$suggestions_destination = &$suggestions->getDestinationSuggestions();
+		$searchphrase_origin = $suggestions->getRequestInfo()['origin'];
+		$searchphrase_destination =$suggestions->getRequestInfo()['destination'];
+		
+		/* origin */
+		$most_probable_index = 0;
+		$highest_probability = 0;
+		foreach($suggestions_origin AS $index=>$suggestion) {
+			$current_probability = 0;
+			similar_text($searchphrase_origin, $suggestion, $current_probability);
+			if($current_probability > $highest_probability) {
+				$highest_probability = $current_probability;
+				$most_probable_index = $index;
+			}
+		}
+		
+		$origin_index = $most_probable_index;
+				
+		/* destination */
+		$most_probable_index = 0;
+		$highest_probability = 0;
+		foreach($suggestions_destination AS $index=>$suggestion) {
+			$current_probability = 0;
+			similar_text($searchphrase_destination, $suggestion, $current_probability);
+			if($current_probability > $highest_probability) {
+				$highest_probability = $current_probability;
+				$most_probable_index = $index;
+			}
+		}
+		
+		$destination_index = $most_probable_index;
+				
+		return $suggestions->utilize($origin_index, $destination_index);
+	}
 }
 ?>

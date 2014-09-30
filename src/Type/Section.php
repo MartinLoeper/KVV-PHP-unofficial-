@@ -25,7 +25,7 @@ class Section {
 	}
 	
 	public function getOriginTime() {
-		return strtotime($this->origin_time, $time_base);	// what happens if time is before timestamp???
+		return Helper::getTimestamp($this->origin_time, $this->time_base);
 	}
 	
 	public function getOriginPlace() {
@@ -33,7 +33,7 @@ class Section {
 	}
 	
 	public function getDestinationTime() {
-		return strtotime($this->destination_time, $time_base);
+		return Helper::getTimestamp($this->destination_time, $this->time_base);
 	}
 	
 	public function getDestinationPlace() {
