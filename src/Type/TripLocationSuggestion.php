@@ -56,7 +56,7 @@ class TripLocationSuggestion {
 		$this->efa->setSessionId($this->getSessionId());
 		$this->efa->setRequestId($this->getRequestId());
 
-		return $this->efa->search($this->origin_stations[$start], $this->destination_stations[$end], $this->requestInfo['timestamp']);
+		return $this->efa->precise_search($this->origin_stations[$start], $this->destination_stations[$end], $this->requestInfo['timestamp'], $this->requestInfo['language']);
 	}
 }
 ?>

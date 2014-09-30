@@ -73,6 +73,86 @@ class EFA {
 	}
 	
 	/**
+		This method is invoked from a TripLocationSuggestion object to do a precise match.
+	**/
+	public function precise_search($origin, $destination, $timestamp, $lang, $travel_type=EFA::TRAVEL_TYPE_DEPARTURE, $no_solid_stairs=FALSE, $no_escalators=FALSE, $no_elevators=FALSE, $low_platform_vehicle=FALSE, $wheelchair=FALSE, $change_speed=EFA::TRAVEL_CHANGE_SPEED_NORMAL, $lang=EFA::LANGUAGE_GERMAN) {
+		$randomizer = (!$this->cache_enabled) ? time() : self::FIXED_TIME_CONSTANT;
+		$res = $this->client->get(self::WEB_ROOT.self::URI_BASE, [
+			'exceptions' => true,
+			'query' => ['eID' => self::KVV_SEARCH_ENGINE,
+						'ix_action' => self::ACTION_TRIP_SEARCH,
+						'sessionID' => $this->current_sessionID,
+						'requestID' => $this->current_requestID,
+						'ix_originValue' => urlencode($origin[1]),
+						'ix_originSessionValue' => urlencode($origin[0]),
+						'ix_destinationSessionValue' => urlencode($destination[0]),
+						'ix_originText' => urlencode($origin[1]),
+						'type_origin' => 'any',
+						'ix_destinationValue' => urlencode($destination[1]),
+						'type_destination' => 'any',
+						'nameState_origin' => 'list',
+						'sessionID' => $this->current_sessionID,
+						'requestID' => $this->current_requestID,
+						'ix_destinationText' => urlencode($destination[1]),
+						'ix_date' => date('d.m.Y', $timestamp),
+						'ix_hour' => date('G', $timestamp),
+						'ix_minute' => date('i', $timestamp),
+						'ix_travelType' => $travel_type,
+						'ix_noSolidStairs' => (int)$no_solid_stairs,
+						'ix_noEscalators' => (int)$no_escalators,
+						'ix_noElevators' => (int)$no_elevators,
+						'ix_lowPlatformVhcl' => (int)$low_platform_vehicle,
+						'ix_wheelchair' => (int)$wheelchair,
+						'ix_changeSpeed' => $change_speed,
+						'ix_language' => $lang,	
+						'_' => $randomizer
+			]
+		]);
+
+		return $this->process_search($res, $origin, $destination, $timestamp, $lang);
+	}
+	
+	public function process_search(&$res, $origin, $destination, $timestamp, $lang) {
+		if($res->getStatusCode() == 200) {
+			$this->last_origin = $origin;
+			$this->last_destination = $destination;
+			$raw = (string)$res->getBody();
+			$html = \str_get_dom($raw);
+			$this->current_sessionID = $html('input#sessionID', 0)->value;
+			$this->current_requestID = $html('input#requestID', 0)->value;
+			if(trim(strtok($raw, "\n")) == '<!-- ix_chooser.html  DO NOT CHANGE THIS FIRST LINE: parsed in javascript !!-->') {
+				// we have to select once again...
+				$origin_stations = array();
+				$destination_stations = array();
+			
+				foreach($html('select#ix_origin option') AS &$station_origin) {
+					//$origin_stations[] = array($station_origin->getInnerText() => $station_origin->value);
+					$origin_stations[] = array($station_origin->value, trim(preg_replace("/\[[^)]+\]/", "", $station_origin->getInnerText())));
+				}
+				
+				foreach($html('select#ix_destination option') AS &$station_destination) {
+					//$destination_stations[] = array($station_destination->getInnerText() => $station_destination->value);
+					$destination_stations[] = array($station_destination->value, trim(preg_replace("/\[[^)]+\]/", "", $station_destination->getInnerText())));
+				}
+				
+				$suggestion = new \KVV\Type\TripLocationSuggestion(array('timestamp' => $timestamp, 'language' => $lang, 'origin' => $origin, 'destination' => $destination), $this->current_sessionID, $this->current_requestID, $origin_stations, $destination_stations, $this);
+				return new \KVV\Type\TripRequest(false, $suggestion, $this);
+			}
+			else {
+				// return trips
+				$trips = &$this->parseTrips($html, $origin, $destination, $timestamp, $lang);
+				
+				if($trips->isCompleted())
+					$this->current_item_number = count($trips->getInfo());
+				
+				return $trips;
+			}
+		}
+
+		return null; 
+	}
+	
+	/**
 		Retrieves a trip for given origin, destination and time information.
 		Heads Up! Always catch \KVV\RouteNotFoundException!
 		@throws \GuzzleHttp\Exception\TransferException All kinds of Exceptions by Guzzle HTTP Library
@@ -119,44 +199,8 @@ class EFA {
 						'_' => $randomizer
 			]
 		]);
-	
-		if($res->getStatusCode() == 200) {
-			$this->last_origin = $origin;
-			$this->last_destination = $destination;
-			$raw = (string)$res->getBody();
-			$html = \str_get_dom($raw);
-			$this->current_sessionID = $html('input#sessionID', 0)->value;
-			$this->current_requestID = $html('input#requestID', 0)->value;
-			if(trim(strtok($raw, "\n")) == '<!-- ix_chooser.html  DO NOT CHANGE THIS FIRST LINE: parsed in javascript !!-->') {
-				// we have to select once again...
-				$origin_stations = array();
-				$destination_stations = array();
-			
-				foreach($html('select#ix_origin option') AS &$station_origin) {
-					//$origin_stations[] = array($station_origin->getInnerText() => $station_origin->value);
-					$origin_stations[] = preg_replace("/\[[^)]+\]/", "", $station_origin->getInnerText());
-				}
-				
-				foreach($html('select#ix_destination option') AS &$station_destination) {
-					//$destination_stations[] = array($station_destination->getInnerText() => $station_destination->value);
-					$destination_stations[] = preg_replace("/\[[^)]+\]/", "", $station_destination->getInnerText());
-				}
-				
-				$suggestion = new \KVV\Type\TripLocationSuggestion(array('timestamp' => $timestamp, 'language' => $lang, 'origin' => $origin, 'destination' => $destination), $this->current_sessionID, $this->current_requestID, $origin_stations, $destination_stations, $this);
-				return new \KVV\Type\TripRequest(false, $suggestion, $this);
-			}
-			else {
-				// return trips
-				$trips = &$this->parseTrips($html, $origin, $destination, $timestamp, $lang);
-				
-				if($trips->isCompleted())
-					$this->current_item_number = count($trips->getInfo());
-				
-				return $trips;
-			}
-		}
 
-		return null; 
+		return $this->process_search($res, $origin, $destination, $timestamp, $lang);
 	}
 	
 	/**
