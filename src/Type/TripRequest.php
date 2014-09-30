@@ -38,7 +38,7 @@ class TripRequest {
 		@param $wheelchair (optional) if vehicles with wheelchair lift or level entrances are required set this TRUE - default: false
 		@param $change_speed (optional) the walking time: choose between (string) slow, normal, fast - default:normal
 
-		@return an array of objects with type \KVV\Type\Trip
+		@return an array of objects with type \KVV\Type\TripRequest
 	**/
 	public function getNext($no_solid_stairs=FALSE, $no_escalators=FALSE, $no_elevators=FALSE, $low_platform_vehicle=FALSE, $wheelchair=FALSE, $change_speed=\KVV\EFA::TRAVEL_CHANGE_SPEED_NORMAL) {
 		if(!$this->isCompleted())
@@ -49,7 +49,8 @@ class TripRequest {
 				
 		$last = &$this->getInfo()[count($this->getInfo())-1];
 		
-		$next_trips = $this->efa->search($this->getInfo()[0]->getRequestInfo()["origin"], $this->getInfo()[0]->getRequestInfo()["destination"], $last->getInterval()[1], \KVV\EFA::TRAVEL_TYPE_DEPARTURE, $no_solid_stairs, $no_escalators, $no_elevators, $low_platform_vehicle, $wheelchair, $change_speed, $this->getInfo()[0]->getRequestInfo()["language"])->getInfo();
+		$next_trips_request = $this->efa->search($this->getInfo()[0]->getRequestInfo()["origin"], $this->getInfo()[0]->getRequestInfo()["destination"], $last->getInterval()[1], \KVV\EFA::TRAVEL_TYPE_DEPARTURE, $no_solid_stairs, $no_escalators, $no_elevators, $low_platform_vehicle, $wheelchair, $change_speed, $this->getInfo()[0]->getRequestInfo()["language"]);
+		$next_trips = $next_trips_request->getInfo();
 		
 		/* remove duplicates */
 		foreach($next_trips AS $index=>$previous_trip) {
@@ -59,7 +60,13 @@ class TripRequest {
 			}
 		} 
 		
-		return $next_trips;
+		$next_trips_request->setInfo($next_trips);
+		
+		return $next_trips_request;
+	}
+	
+	public function setInfo($info) {
+		$this->info = $info;
 	}
 	
 	/**
@@ -75,7 +82,7 @@ class TripRequest {
 		@param $wheelchair (optional) if vehicles with wheelchair lift or level entrances are required set this TRUE - default: false
 		@param $change_speed (optional) the walking time: choose between (string) slow, normal, fast - default:normal
 
-		@return an array of objects with type \KVV\Type\Trip
+		@return an array of objects with type \KVV\Type\TripRequest
 	**/
 	public function getPrevious($no_solid_stairs=FALSE, $no_escalators=FALSE, $no_elevators=FALSE, $low_platform_vehicle=FALSE, $wheelchair=FALSE, $change_speed=\KVV\EFA::TRAVEL_CHANGE_SPEED_NORMAL) {
 		if(!$this->isCompleted())
@@ -86,7 +93,8 @@ class TripRequest {
 				
 		$first = &$this->getInfo()[0];
 		
-		$previous_trips = $this->efa->search($this->getInfo()[0]->getRequestInfo()["origin"], $this->getInfo()[0]->getRequestInfo()["destination"], $first->getInterval()[0], \KVV\EFA::TRAVEL_TYPE_ARRIVAL, $no_solid_stairs, $no_escalators, $no_elevators, $low_platform_vehicle, $wheelchair, $change_speed, $this->getInfo()[0]->getRequestInfo()["language"])->getInfo();
+		$previous_trips_request = $this->efa->search($this->getInfo()[0]->getRequestInfo()["origin"], $this->getInfo()[0]->getRequestInfo()["destination"], $first->getInterval()[0], \KVV\EFA::TRAVEL_TYPE_ARRIVAL, $no_solid_stairs, $no_escalators, $no_elevators, $low_platform_vehicle, $wheelchair, $change_speed, $this->getInfo()[0]->getRequestInfo()["language"]);
+		$previous_trips = $previous_trips_request->getInfo();
 		
 		/* remove duplicates */
 		foreach($previous_trips AS $index=>$previous_trip) {
@@ -96,7 +104,9 @@ class TripRequest {
 			}
 		}
 		
-		return $previous_trips;
+		$previous_trips_request->setInfo($previous_trips);
+		
+		return $previous_trips_request;
 	}
 	
 	/**
