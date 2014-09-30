@@ -182,13 +182,18 @@ class EFA {
 	**/
 	public function getDeparturesByRoute($stopId, $route, $maxInfos=10) {
 		$randomizer = (!$this->cache_enabled) ? time() : self::FIXED_TIME_CONSTANT;
-		$res = $this->client->get(self::WEB_ROOT.self::URI_BASE."departures/byroute/".urlencode($route)."/".urlencode($stopId), [
-			'exceptions' => true,
-			'query' => ['key' => self::KVV_KEY,
-						'maxInfos' => $maxInfos,
-						'_' => $randomizer
-			]
-		]);
+		try {
+			$res = $this->client->get(self::WEB_ROOT.self::URI_BASE."departures/byroute/".urlencode($route)."/".urlencode($stopId), [
+				'exceptions' => true,
+				'query' => ['key' => self::KVV_KEY,
+							'maxInfos' => $maxInfos,
+							'_' => $randomizer
+				]
+			]);
+		}
+		catch(\GuzzleHttp\Exception\ClientException $e) {
+			throw new NoLiveDataAccessException();
+		}
 		
 		if($res->getStatusCode() == 200) {
 			$departures = array();
