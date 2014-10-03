@@ -62,6 +62,10 @@ class Departure {
 		return $this->time;
 	}
 	
+	public function getTimestamp() {
+		return $this->timestamp;
+	}
+	
 	public function getTraction() {
 		return $this->traction;
 	}
