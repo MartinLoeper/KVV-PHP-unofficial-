@@ -77,9 +77,7 @@ class EFA {
 	**/
 	public function precise_search($origin, $destination, $timestamp, $lang, $travel_type=EFA::TRAVEL_TYPE_DEPARTURE, $no_solid_stairs=FALSE, $no_escalators=FALSE, $no_elevators=FALSE, $low_platform_vehicle=FALSE, $wheelchair=FALSE, $change_speed=EFA::TRAVEL_CHANGE_SPEED_NORMAL, $lang=EFA::LANGUAGE_GERMAN) {
 		$randomizer = (!$this->cache_enabled) ? time() : self::FIXED_TIME_CONSTANT;
-		$res = $this->client->get(self::WEB_ROOT.self::URI_BASE, [
-			'exceptions' => true,
-			'query' => ['eID' => self::KVV_SEARCH_ENGINE,
+		$query = ['eID' => self::KVV_SEARCH_ENGINE,
 						'ix_action' => self::ACTION_TRIP_SEARCH,
 						'sessionID' => $this->current_sessionID,
 						'requestID' => $this->current_requestID,
@@ -90,7 +88,6 @@ class EFA {
 						'type_origin' => 'any',
 						'ix_destinationValue' => urlencode($destination[1]),
 						'type_destination' => 'any',
-						'nameState_origin' => 'list',
 						'sessionID' => $this->current_sessionID,
 						'requestID' => $this->current_requestID,
 						'ix_destinationText' => urlencode($destination[1]),
@@ -106,9 +103,19 @@ class EFA {
 						'ix_changeSpeed' => $change_speed,
 						'ix_language' => $lang,	
 						'_' => $randomizer
-			]
+			];
+			
+		if(count(explode(':', $origin[0])) > 1)
+			$query['nameState_origin'] = 'list';
+			
+		if(count(explode(':', $destination[0])) > 1)
+			$query['nameState_destination'] = 'list';
+		
+		$res = $this->client->get(self::WEB_ROOT.self::URI_BASE, [
+			'exceptions' => true,
+			'query' => $query
 		]);
-
+		
 		return $this->process_search($res, $origin, $destination, $timestamp, $lang);
 	}
 	
