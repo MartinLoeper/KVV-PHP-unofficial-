@@ -29,7 +29,8 @@ For a full documentation and some useful examples visit the wiki: https://github
 ### Other languages
 Bindings for other programming languages are available for:
 * <a href="https://github.com/Nervengift/kvvliveapi">Python (Live API)</a>
-
+* <a href="https://github.com/MartinLoeper/KVV_JAVA_API">Java</a>
+* 
 <blockquote>
 If you want to look into the reference, visit the <a href='https://github.com/MartinLoeper/KVV-PHP-unofficial-/wiki/Types'>Types Wiki-Page</a>.
 </blockquote>
