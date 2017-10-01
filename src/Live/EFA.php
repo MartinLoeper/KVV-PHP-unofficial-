@@ -8,7 +8,7 @@ namespace KVV\Live;
 class EFA {
 	private $client;
 	private $cache_enabled;
-	const WEB_ROOT = 'http://live.kvv.de/';
+	const WEB_ROOT = 'https://live.kvv.de/';
 	const URI_BASE = 'webapp/';
 	const KVV_KEY = '377d840e54b59adbe53608ba1aad70e8';
 	const FIXED_TIME_CONSTANT = 123456789;
